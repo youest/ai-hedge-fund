@@ -5,7 +5,7 @@ This adapter makes Claude Code CLI compatible with the existing LangChain-based
 infrastructure, allowing seamless integration with the AI Hedge Fund agents.
 """
 
-from typing import Any, List, Optional, Iterator
+from typing import Any, List, Optional, Iterator, Dict
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from langchain_core.outputs import ChatResult, ChatGeneration, ChatGenerationChunk
@@ -15,6 +15,24 @@ from typing_extensions import Literal
 import json
 
 from src.llm.claude_code_wrapper import ClaudeCodeWrapper, ClaudeCodeConfig
+
+
+class ClaudeCodeCLIResponse(BaseModel):
+    """
+    Pydantic model for Claude Code CLI response when using --output-format json.
+
+    The CLI wraps the actual response in metadata about the request.
+    """
+    type: str = Field(description="Response type, typically 'result'")
+    subtype: str = Field(description="Response subtype, e.g. 'success' or 'error'")
+    is_error: bool = Field(description="Whether the response is an error")
+    duration_ms: Optional[float] = Field(default=None, description="Duration in milliseconds")
+    duration_api_ms: Optional[float] = Field(default=None, description="API duration in milliseconds")
+    num_turns: Optional[int] = Field(default=None, description="Number of conversation turns")
+    result: str = Field(description="The actual response content from Claude")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    total_cost_usd: Optional[float] = Field(default=None, description="Total cost in USD")
+    usage: Optional[Dict[str, Any]] = Field(default=None, description="Token usage information")
 
 
 class ClaudeCodeAdapter(BaseChatModel):
@@ -129,9 +147,13 @@ Do not include explanations before or after the JSON."""
 
         # Call Claude Code CLI
         try:
+            # Use JSON output format if structured output is requested
+            output_format = "json" if self._structured_output_schema else None
+
             response_text = self.wrapper.query(
                 prompt,
-                timeout=kwargs.get("timeout", self.timeout)
+                timeout=kwargs.get("timeout", self.timeout),
+                output_format=output_format
             )
         except Exception as e:
             # Return error as response
@@ -205,49 +227,48 @@ Do not include explanations before or after the JSON."""
         """
         Parse JSON from Claude's response and convert to Pydantic model.
 
+        Handles two formats:
+        1. Wrapped format (when using --output-format json): ClaudeCodeCLIResponse with result field
+        2. Plain format (direct JSON or markdown-wrapped JSON)
+
         Args:
             response_text: Raw response from Claude Code
-            schema: Pydantic model class
+            schema: Target Pydantic model class for the actual data
 
         Returns:
-            Instance of the Pydantic model
+            Instance of the target Pydantic model
 
         Raises:
-            ValueError: If JSON cannot be parsed
+            ValueError: If JSON cannot be parsed or validated
         """
-        # Try to extract JSON from markdown code blocks
-        json_str = response_text.strip()
+        content = response_text.strip()
 
-        # Check for markdown JSON block
-        if "```json" in json_str:
-            start = json_str.find("```json") + 7
-            end = json_str.find("```", start)
-            if end > start:
-                json_str = json_str[start:end].strip()
-        elif "```" in json_str:
-            # Generic code block
-            start = json_str.find("```") + 3
-            end = json_str.find("```", start)
-            if end > start:
-                json_str = json_str[start:end].strip()
-
-        # Try to find JSON object boundaries if no code block
-        if not json_str.startswith("{"):
-            start = json_str.find("{")
-            if start >= 0:
-                # Find matching closing brace
-                end = json_str.rfind("}")
-                if end > start:
-                    json_str = json_str[start:end+1]
-
-        # Parse JSON and create model
+        # Try to parse as wrapped format first (--output-format json)
         try:
-            data = json.loads(json_str)
+            cli_response = ClaudeCodeCLIResponse.model_validate_json(content)
+            content = cli_response.result
+        except Exception:
+            # Not wrapped format, use content as-is
+            pass
+
+        # Remove markdown code blocks if present
+        if "```json" in content:
+            start = content.find("```json") + 7
+            end = content.find("```", start)
+            content = content[start:end].strip()
+        elif content.startswith("```"):
+            start = content.find("```") + 3
+            end = content.find("```", start)
+            content = content[start:end].strip()
+
+        # Parse the actual JSON into the target schema
+        try:
+            data = json.loads(content)
             return schema(**data)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse JSON: {e}\nResponse: {json_str[:200]}")
+            raise ValueError(f"Failed to parse JSON: {e}\nContent: {content[:500]}")
         except Exception as e:
-            raise ValueError(f"Failed to create Pydantic model: {e}")
+            raise ValueError(f"Failed to create Pydantic model: {e}\nData: {content[:500]}")
 
     def _create_default_model(self, schema: type[BaseModel]) -> BaseModel:
         """

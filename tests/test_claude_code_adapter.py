@@ -31,7 +31,11 @@ class TestClaudeCodeAdapter:
         AttributeError: 'AIMessage' object has no attribute 'signal'
         """
         # Mock the CLI response to return JSON
-        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None, output_format=None):
+            # When output_format="json", return clean JSON (simulating CLI behavior)
+            if output_format == "json":
+                return '{"signal": "bullish", "confidence": 85, "reasoning": "Strong fundamentals and growth prospects"}'
+
             return """
 Here's my analysis:
 
@@ -75,7 +79,11 @@ Here's my analysis:
 
     def test_structured_output_with_markdown_json(self, monkeypatch):
         """Test parsing JSON from markdown code blocks."""
-        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None, output_format=None):
+            # When output_format="json", return clean JSON
+            if output_format == "json":
+                return '{"signal": "bearish", "confidence": 72, "reasoning": "Overvalued based on P/E ratio"}'
+
             return """```json
 {
     "signal": "bearish",
@@ -98,7 +106,7 @@ Here's my analysis:
 
     def test_structured_output_with_plain_json(self, monkeypatch):
         """Test parsing plain JSON without markdown."""
-        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None, output_format=None):
             return '{"signal": "neutral", "confidence": 50, "reasoning": "Insufficient data"}'
 
         from src.llm.claude_code_wrapper import ClaudeCodeWrapper
@@ -114,7 +122,7 @@ Here's my analysis:
 
     def test_structured_output_with_malformed_json(self, monkeypatch):
         """Test fallback when JSON is malformed."""
-        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None, output_format=None):
             return "This is not JSON at all"
 
         from src.llm.claude_code_wrapper import ClaudeCodeWrapper
@@ -133,7 +141,7 @@ Here's my analysis:
 
     def test_normal_invoke_without_structured_output(self, monkeypatch):
         """Test that normal invoke (without structured output) still returns AIMessage."""
-        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None, output_format=None):
             return "Normal text response without JSON"
 
         from src.llm.claude_code_wrapper import ClaudeCodeWrapper
@@ -151,7 +159,7 @@ Here's my analysis:
         """Test that model_name is correctly passed to the wrapper config."""
         from src.llm.claude_code_wrapper import ClaudeCodeWrapper
 
-        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None, output_format=None):
             return "Test response"
 
         monkeypatch.setattr(ClaudeCodeWrapper, "query", mock_query)
@@ -166,7 +174,7 @@ Here's my analysis:
         """Test that None or empty string means use CLI default (no -m flag)."""
         from src.llm.claude_code_wrapper import ClaudeCodeWrapper
 
-        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None, output_format=None):
             return "Test response"
 
         monkeypatch.setattr(ClaudeCodeWrapper, "query", mock_query)
