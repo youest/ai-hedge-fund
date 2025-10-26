@@ -31,7 +31,7 @@ class TestClaudeCodeAdapter:
         AttributeError: 'AIMessage' object has no attribute 'signal'
         """
         # Mock the CLI response to return JSON
-        def mock_query(self, prompt, timeout=None, working_dir=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
             return """
 Here's my analysis:
 
@@ -75,7 +75,7 @@ Here's my analysis:
 
     def test_structured_output_with_markdown_json(self, monkeypatch):
         """Test parsing JSON from markdown code blocks."""
-        def mock_query(self, prompt, timeout=None, working_dir=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
             return """```json
 {
     "signal": "bearish",
@@ -98,7 +98,7 @@ Here's my analysis:
 
     def test_structured_output_with_plain_json(self, monkeypatch):
         """Test parsing plain JSON without markdown."""
-        def mock_query(self, prompt, timeout=None, working_dir=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
             return '{"signal": "neutral", "confidence": 50, "reasoning": "Insufficient data"}'
 
         from src.llm.claude_code_wrapper import ClaudeCodeWrapper
@@ -114,7 +114,7 @@ Here's my analysis:
 
     def test_structured_output_with_malformed_json(self, monkeypatch):
         """Test fallback when JSON is malformed."""
-        def mock_query(self, prompt, timeout=None, working_dir=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
             return "This is not JSON at all"
 
         from src.llm.claude_code_wrapper import ClaudeCodeWrapper
@@ -133,7 +133,7 @@ Here's my analysis:
 
     def test_normal_invoke_without_structured_output(self, monkeypatch):
         """Test that normal invoke (without structured output) still returns AIMessage."""
-        def mock_query(self, prompt, timeout=None, working_dir=None):
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
             return "Normal text response without JSON"
 
         from src.llm.claude_code_wrapper import ClaudeCodeWrapper
@@ -146,3 +146,35 @@ Here's my analysis:
         from langchain_core.messages import AIMessage
         assert isinstance(result, AIMessage)
         assert "Normal text response" in result.content
+
+    def test_model_name_passed_to_wrapper(self, monkeypatch):
+        """Test that model_name is correctly passed to the wrapper config."""
+        from src.llm.claude_code_wrapper import ClaudeCodeWrapper
+
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+            return "Test response"
+
+        monkeypatch.setattr(ClaudeCodeWrapper, "query", mock_query)
+
+        # Test with specific model alias (Claude Code uses aliases: sonnet, haiku, opus)
+        adapter = ClaudeCodeAdapter(model_name="sonnet")
+
+        # Verify model name is stored in wrapper config
+        assert adapter.wrapper.config.model_name == "sonnet"
+
+    def test_default_model_name_is_none(self, monkeypatch):
+        """Test that None or empty string means use CLI default (no -m flag)."""
+        from src.llm.claude_code_wrapper import ClaudeCodeWrapper
+
+        def mock_query(self, prompt, timeout=None, working_dir=None, model_name=None):
+            return "Test response"
+
+        monkeypatch.setattr(ClaudeCodeWrapper, "query", mock_query)
+
+        # Test with None (default)
+        adapter1 = ClaudeCodeAdapter(model_name=None)
+        assert adapter1.wrapper.config.model_name is None
+
+        # Test with empty string (should also be None)
+        adapter2 = ClaudeCodeAdapter()  # Uses default None
+        assert adapter2.wrapper.config.model_name is None

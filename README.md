@@ -43,6 +43,8 @@ By using this software, you agree to use it solely for learning purposes.
 
 ## Table of Contents
 - [How to Install](#how-to-install)
+  - [Set up API keys](#2-set-up-api-keys)
+  - [Optional: Use Claude Code with Subscription](#3-optional-use-claude-code-with-subscription-recommended-for-high-usage)
 - [How to Run](#how-to-run)
   - [⌨️ Command Line Interface](#️-command-line-interface)
   - [🖥️ Web Application](#️-web-application)
@@ -78,7 +80,7 @@ OPENAI_API_KEY=your-openai-api-key
 FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
 ```
 
-**Important**: You must set at least one LLM API key (e.g. `OPENAI_API_KEY`, `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, or `DEEPSEEK_API_KEY`) for the hedge fund to work. 
+**Important**: You must set at least one LLM API key (e.g. `OPENAI_API_KEY`, `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, or `DEEPSEEK_API_KEY`) for the hedge fund to work.
 
 **Financial Data**: Data for AAPL, GOOGL, MSFT, NVDA, and TSLA is free and does not require an API key. For any other ticker, you will need to set the `FINANCIAL_DATASETS_API_KEY` in the .env file.
 
@@ -111,6 +113,12 @@ You can also specify a `--ollama` flag to run the AI hedge fund using local LLMs
 
 ```bash
 poetry run python src/main.py --ticker AAPL,MSFT,NVDA --ollama
+```
+
+Or use `--claude-code` to use your Claude Pro Max subscription (see setup above):
+
+```bash
+poetry run python src/main.py --ticker AAPL,MSFT,NVDA --claude-code
 ```
 
 You can optionally specify the start and end dates to make decisions over a specific time period.
