@@ -43,8 +43,6 @@ By using this software, you agree to use it solely for learning purposes.
 
 ## Table of Contents
 - [How to Install](#how-to-install)
-  - [Set up API keys](#2-set-up-api-keys)
-  - [Optional: Use Claude Code with Subscription](#3-optional-use-claude-code-with-subscription-recommended-for-high-usage)
 - [How to Run](#how-to-run)
   - [⌨️ Command Line Interface](#️-command-line-interface)
   - [🖥️ Web Application](#️-web-application)
@@ -115,11 +113,6 @@ You can also specify a `--ollama` flag to run the AI hedge fund using local LLMs
 poetry run python src/main.py --ticker AAPL,MSFT,NVDA --ollama
 ```
 
-Or use `--claude-code` to use your Claude Pro Max subscription (see setup above):
-
-```bash
-poetry run python src/main.py --ticker AAPL,MSFT,NVDA --claude-code
-```
 
 You can optionally specify the start and end dates to make decisions over a specific time period.
 
