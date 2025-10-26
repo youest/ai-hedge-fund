@@ -1,7 +1,22 @@
 [
   {
-    "display_name": "Claude Code (Subscription)",
-    "model_name": "claude-code-subscription",
+    "display_name": "Claude Code - Default model",
+    "model_name": "",
+    "provider": "Claude Code"
+  },
+  {
+    "display_name": "Claude Code - Sonnet",
+    "model_name": "sonnet",
+    "provider": "Claude Code"
+  },
+  {
+    "display_name": "Claude Code - Haiku",
+    "model_name": "haiku",
+    "provider": "Claude Code"
+  },
+  {
+    "display_name": "Claude Code - Opus",
+    "model_name": "opus",
     "provider": "Claude Code"
   },
   {

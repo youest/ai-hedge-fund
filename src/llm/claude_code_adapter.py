@@ -33,6 +33,7 @@ class ClaudeCodeAdapter(BaseChatModel):
     wrapper: Optional[ClaudeCodeWrapper] = Field(default=None, exclude=True)
     timeout: int = Field(default=60)
     cli_path: Optional[str] = Field(default=None)
+    model_name: Optional[str] = Field(default=None)
 
     # Private attribute to track structured output schema
     _structured_output_schema: Optional[type[BaseModel]] = PrivateAttr(default=None)
@@ -44,7 +45,8 @@ class ClaudeCodeAdapter(BaseChatModel):
         if self.wrapper is None:
             config = ClaudeCodeConfig(
                 timeout=self.timeout,
-                cli_path=self.cli_path
+                cli_path=self.cli_path,
+                model_name=self.model_name  # Pass directly - None or specific model
             )
             self.wrapper = ClaudeCodeWrapper(config=config)
 
@@ -300,7 +302,8 @@ Do not include explanations before or after the JSON."""
         # Create a new instance with the same config but different schema
         new_adapter = ClaudeCodeAdapter(
             timeout=self.timeout,
-            cli_path=self.cli_path
+            cli_path=self.cli_path,
+            model_name=self.model_name
         )
         new_adapter._structured_output_schema = schema
         new_adapter.wrapper = self.wrapper  # Reuse the wrapper
@@ -320,7 +323,8 @@ Do not include explanations before or after the JSON."""
 
 def create_claude_code_adapter(
     timeout: int = 60,
-    cli_path: Optional[str] = None
+    cli_path: Optional[str] = None,
+    model_name: Optional[str] = None
 ) -> ClaudeCodeAdapter:
     """
     Factory function to create a Claude Code adapter.
@@ -328,11 +332,17 @@ def create_claude_code_adapter(
     Args:
         timeout: Timeout for CLI queries in seconds
         cli_path: Custom path to claude CLI (optional)
+        model_name: Model to use (e.g., "sonnet", "haiku", "opus", cli uses aliases)
+                   If None or empty, uses CLI default model
 
     Returns:
         Configured ClaudeCodeAdapter
     """
+    # Treat empty string as None
+    actual_model = model_name if model_name else None
+
     return ClaudeCodeAdapter(
         timeout=timeout,
-        cli_path=cli_path
+        cli_path=cli_path,
+        model_name=actual_model
     )

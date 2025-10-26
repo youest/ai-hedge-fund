@@ -43,6 +43,7 @@ from pathlib import Path
 class ClaudeCodeConfig:
     """Configuration for Claude Code CLI wrapper."""
     cli_path: Optional[str] = None  # Auto-detect if None
+    model_name: Optional[str] = None  # Claude model to use (e.g., "sonnet", "haiku", "opus") or None for default cli model
     timeout: int = 60  # Seconds
     max_retries: int = 3
     working_dir: Optional[str] = None
@@ -169,7 +170,8 @@ class ClaudeCodeWrapper:
         self,
         prompt: str,
         timeout: Optional[int] = None,
-        working_dir: Optional[str] = None
+        working_dir: Optional[str] = None,
+        model_name: Optional[str] = None
     ) -> str:
         """
         Execute a one-shot query to Claude Code.
@@ -178,6 +180,7 @@ class ClaudeCodeWrapper:
             prompt: The prompt/question to send
             timeout: Timeout in seconds (default: from config)
             working_dir: Working directory for command (default: current dir)
+            model_name: Model to use (overrides config, e.g., "claude-3-5-sonnet-latest")
 
         Returns:
             Claude's response as text
@@ -188,11 +191,22 @@ class ClaudeCodeWrapper:
         """
         timeout = timeout or self.config.timeout
         working_dir = working_dir or self.config.working_dir or os.getcwd()
+        model = model_name or self.config.model_name
 
         try:
-            # Use -p flag for prompt-only mode (query and exit)
+            # Build command with optional model flag
+            cmd = [self.cli_path]
+
+            # Add model flag if specified
+            # Claude Code uses --model with aliases: sonnet, haiku, opus
+            if model:
+                cmd.extend(["--model", model])
+
+            # Add prompt
+            cmd.extend(["-p", prompt])
+
             result = subprocess.run(
-                [self.cli_path, "-p", prompt],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -200,10 +214,12 @@ class ClaudeCodeWrapper:
             )
 
             if result.returncode != 0:
-                raise ClaudeCodeCLIError(
-                    f"Claude Code CLI failed with code {result.returncode}:\n"
-                    f"stderr: {result.stderr}"
-                )
+                error_msg = f"Claude Code CLI failed with code {result.returncode}"
+                if result.stdout:
+                    error_msg += f"\nstdout: {result.stdout}"
+                if result.stderr:
+                    error_msg += f"\nstderr: {result.stderr}"
+                raise ClaudeCodeCLIError(error_msg)
 
             return result.stdout.strip()
 

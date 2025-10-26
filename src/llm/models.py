@@ -145,7 +145,11 @@ def get_model(model_name: str, model_provider: ModelProvider, api_keys: dict = N
             from src.llm.claude_code_adapter import create_claude_code_adapter
             timeout = int(os.getenv("CLAUDE_CODE_TIMEOUT", "60"))
             cli_path = os.getenv("CLAUDE_CODE_CLI_PATH") or None
-            return create_claude_code_adapter(timeout=timeout, cli_path=cli_path)
+            return create_claude_code_adapter(
+                timeout=timeout,
+                cli_path=cli_path,
+                model_name=model_name
+            )
         except Exception as e:
             print(f"Error creating Claude Code adapter: {e}")
             print("Make sure Claude Code CLI is installed: npm install -g @anthropic-ai/claude-code")
