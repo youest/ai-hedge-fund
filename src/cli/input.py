@@ -40,6 +40,7 @@ def add_common_args(
         )
     if include_ollama:
         parser.add_argument("--ollama", action="store_true", help="Use Ollama for local LLM inference")
+    parser.add_argument("--claude-code", action="store_true", help="Use Claude Code CLI (requires subscription, no API key)")
     parser.add_argument("--model", type=str, required=False, help="Model name to use (e.g., gpt-4o)")
     return parser
 
@@ -102,7 +103,7 @@ def select_analysts(flags: dict | None = None) -> list[str]:
     return choices
 
 
-def select_model(use_ollama: bool, model_flag: str | None = None) -> tuple[str, str]:
+def select_model(use_ollama: bool, model_flag: str | None = None, use_claude_code: bool = False) -> tuple[str, str]:
     model_name: str = ""
     model_provider: str | None = None
 
@@ -115,6 +116,18 @@ def select_model(use_ollama: bool, model_flag: str | None = None) -> tuple[str, 
             return model.model_name, model.provider.value
         else:
             print(f"{Fore.RED}Model '{model_flag}' not found. Please select a model.{Style.RESET_ALL}")
+
+    if use_claude_code:
+        print(f"{Fore.CYAN}Using Claude Code CLI (subscription-based, no API key needed).{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Make sure Claude Code is installed and authenticated!{Style.RESET_ALL}")
+        print(f"  Install: npm install -g @anthropic-ai/claude-code")
+        print(f"  Auth: claude /login\n")
+        model_name = "claude-code-subscription"
+        model_provider = ModelProvider.CLAUDE_CODE.value
+        print(
+            f"Selected {Fore.CYAN}Claude Code{Style.RESET_ALL} (uses your Pro Max subscription)\n"
+        )
+        return model_name, model_provider
 
     if use_ollama:
         print(f"{Fore.CYAN}Using Ollama for local LLM inference.{Style.RESET_ALL}")
@@ -268,7 +281,11 @@ def parse_cli_inputs(
         "analysts_all": getattr(args, "analysts_all", False),
         "analysts": getattr(args, "analysts", None),
     })
-    model_name, model_provider = select_model(getattr(args, "ollama", False), getattr(args, "model", None))
+    model_name, model_provider = select_model(
+        getattr(args, "ollama", False),
+        getattr(args, "model", None),
+        use_claude_code=getattr(args, "claude_code", False)
+    )
     start_date, end_date = resolve_dates(getattr(args, "start_date", None), getattr(args, "end_date", None), default_months_back=default_months_back)
 
     return CLIInputs(

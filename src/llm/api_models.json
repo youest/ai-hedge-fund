@@ -1,5 +1,10 @@
 [
   {
+    "display_name": "Claude Code (Subscription)",
+    "model_name": "claude-code-subscription",
+    "provider": "Claude Code"
+  },
+  {
     "display_name": "Grok 4",
     "model_name": "grok-4-0709",
     "provider": "xAI"
